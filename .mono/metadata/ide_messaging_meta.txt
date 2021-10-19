@@ -1,0 +1,2 @@
+﻿42173
+/nix/store/sif41kh0qxgh2vgcx32knsphgxd8l83w-godot-mono-unwrapped/Godot_v3.3.2-stable_mono_x11_64/Godot_v3.3.2-stable_mono_x11.64

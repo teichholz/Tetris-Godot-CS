@@ -1,0 +1,8 @@
+/home/tim/games/Tetris/.mono/temp/bin/Debug/Tetris.dll
+/home/tim/games/Tetris/.mono/temp/bin/Debug/Tetris.pdb
+/home/tim/games/Tetris/.mono/temp/obj/Debug/Tetris.csprojAssemblyReference.cache
+/home/tim/games/Tetris/.mono/temp/obj/Debug/Tetris.AssemblyInfoInputs.cache
+/home/tim/games/Tetris/.mono/temp/obj/Debug/Tetris.AssemblyInfo.cs
+/home/tim/games/Tetris/.mono/temp/obj/Debug/Tetris.dll
+/home/tim/games/Tetris/.mono/temp/obj/Debug/Tetris.pdb
+/home/tim/games/Tetris/.mono/temp/obj/Debug/Tetris.csproj.CoreCompileInputs.cache
