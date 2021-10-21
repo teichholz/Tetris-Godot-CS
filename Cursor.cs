@@ -17,19 +17,10 @@ namespace Tetris
             return new Vector2(x, y);
         }
         
-        public Cursor move(InputEvent evt)
+        public Cursor move(Vector2 vec)
         {
-            if (evt.IsActionPressed("ui_down"))
-            {
-                y += 1;
-            } else if (evt.IsActionPressed("ui_right"))
-            {
-                x += 1;
-            } else if (evt.IsActionPressed("ui_left"))
-            {
-                x -= 1;
-            }
-
+            x += (int) vec.x;
+            y += (int) vec.y;
             return this;
         }
 

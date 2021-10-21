@@ -59,8 +59,7 @@ namespace Tetris
         public Tetrimino Rotate()
         {
             double degree = Math.PI * 0.5; // 90
-            points = points.Select(x => rotatePoint(x, degree)).ToList();
-            return this;
+            return new Tetrimino(points.Select(x => rotatePoint(x, degree)).ToList());
         }
 
         Vector2 rotatePoint(Vector2 point, double degree)

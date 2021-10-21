@@ -1,14 +1,14 @@
 using Godot;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
+using System.Runtime.InteropServices;
 using Microsoft.Win32;
 using Tetris;
 
 public class Map : Node2D
 {
-    // Width 12
-    // Height h
 
     private static int width = (int) ProjectSettings.GetSetting("display/window/size/width");
     private static int height = (int) ProjectSettings.GetSetting("display/window/size/height");
@@ -31,6 +31,7 @@ public class Map : Node2D
     private float _tick_ctr = 0f;
     private Tetrimino _current_tetrimonio;
     private bool _tetrimonio_alive = false;
+    private bool _doRotate = false;
 
     public enum Tile
     {
@@ -49,7 +50,13 @@ public class Map : Node2D
 
     public override void _Input(InputEvent @event)
     {
-        _lastInputEvent = @event;
+        if (@event.IsAction("ui_select")) _doRotate = true;
+        else if (@event.IsAction("ui_down")) cursor.move(new Vector2(0, 1));
+        else if (inBounds(cursor, _current_tetrimonio))
+        {
+            if (@event.IsAction("ui_left")) cursor.move(new Vector2(-1, 0));
+            if (@event.IsAction("ui_right")) cursor.move(new Vector2(1, 0));
+        }
     }
 
     public override void _Process(float delta)
@@ -64,6 +71,14 @@ public class Map : Node2D
         if (hitGround(cursor, _current_tetrimonio))
         {
             GD.Print("Hit ground\n");
+
+            (int, int)? rws = rowsAreFull();
+            if (rws.HasValue)
+            {
+                (int, int) rows = rws.Value;
+                removeFullRows(rows.Item1, rows.Item2);
+            }
+
             drawMap(map_sheet, map);
             _tetrimonio_alive = false;
         }
@@ -75,20 +90,22 @@ public class Map : Node2D
                 cursor.tick();
                 _tick_ctr = 0;
                 
+                if (_doRotate)
+                {
+                    _current_tetrimonio = _current_tetrimonio.Rotate();
+                    _doRotate = false;
+                }
+                
                 drawMap(map,map_sheet);
                 drawTet(cursor, _current_tetrimonio);
             }
         }
-
-        if (_lastInputEvent != null)
-            cursor.move(_lastInputEvent);
         
-        _lastInputEvent = null;
     }
 
     public Cursor makeNewCursor()
     {
-        return new Cursor(cols / 2, -1);
+        return new Cursor(cols / 2, 0);
     }
 
     public void drawTet(Cursor orig, Tetrimino tet)
@@ -96,17 +113,25 @@ public class Map : Node2D
         tet.Points.Select(vec => vec + orig.asVector()).ToList()
             .ForEach(vec => map.SetCell((int) vec.x, (int) vec.y, (int) Tile.CELL));
     }
+    
+    public void iterateRows(int start_row, int end_row, Action<int, int> action)
+    {
+        for (int i = start_row; i <= end_row; ++i)
+        {
+            for (int j = 0; j < cols; j++)
+            {
+                action(j, i);
+            }
+        }
+    }
 
     public void drawMap(TileMap to, TileMap from)
     {
         GD.Print("drawMap\n");
-        for (int row = 0; row < rows; row++)
+        iterateRows(0, rows -1, (x, y) =>
         {
-            for (int col = 0; col < cols; col++)
-            {
-                to.SetCell(row, col, from.GetCell(row, col));
-            }
-        }
+                to.SetCell(x, y, from.GetCell(x, y));
+        });
     }
 
     public bool isTile(int x, int y, params Tile[] tiles)
@@ -123,16 +148,76 @@ public class Map : Node2D
 
     public bool hitGround(Cursor cursor, Tetrimino tet)
     {
+        float maxY = tet.Points.Max(vec => vec.y);
         return tet.Points
+            .Where(vec => (int) vec.y == (int) maxY)
             .Select(vec => vec + cursor.asVector())
             .Select(vec => isTile(vec.x, vec.y + 1, Tile.WALL, Tile.CELL))
             .Aggregate((b, b1) => b || b1);
     }
 
-    public bool inBounds(Tetrimino tet)
+    public bool inBounds(Cursor cursor, Tetrimino tet)
     {
         return tet.Points
+            .Select(vec => vec + cursor.asVector())
             .Select(vec => vec.x > 0 && vec.x < cols - 1)
             .Aggregate((b, b1) => b || b1);
+    }
+
+    // We scan from top to bottom
+    public (int, int)? rowsAreFull()
+    {
+        int start_row = 0, end_row = 0;
+        bool firstFull = true;
+        for (int cur_row = 0; cur_row <  rows - 1; ++cur_row)
+        {
+            bool isFull = true;
+            for (int cur_col = 1; cur_col < cols - 1; ++cur_col)
+            {
+                if (!isTile(cur_col, cur_row, Tile.CELL))
+                {
+                    isFull = false;
+                    break;
+                }
+            }
+            if (isFull)
+            {
+                if (firstFull)
+                {
+                    start_row = end_row = cur_row;
+                    firstFull = false;
+                }
+                else
+                {
+                    end_row = cur_row;
+                }
+            }
+        }
+
+        if (start_row != 0)
+        {
+            return (start_row, end_row);
+        } 
+        return null;
+    }
+
+
+    public void removeFullRows(int start_row, int end_row)
+    {
+        // remove tiles (CELL) in the area from start_row to end_row
+        iterateRows(start_row, end_row, (x, y) =>
+        {
+            if (isTile(x, y, Tile.CELL)) map.SetCell(x, y, -1); // remove CELL
+        });
+        
+        // move tiles (CELL) above start_row (end_row - start_row + 1) rows down 
+        int toMoveDown = end_row - start_row + 1;
+        iterateRows(0, start_row - 1, (x, y) =>
+        {
+            if (isTile(x, y, Tile.CELL)) {
+                map.SetCell(x, y, -1); 
+                map.SetCell(x, y + toMoveDown, (int) Tile.CELL);
+            }
+        });
     }
 }
